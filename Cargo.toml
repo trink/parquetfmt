@@ -1,0 +1,16 @@
+[package]
+name = "parquetfmt"
+version = "0.1.0"
+authors = ["Mike Trinkala <trink@acm.org>"]
+description = "Tool to find and fix Parquet schema formatting issues"
+repository = "https://github.com/trink/parquetfmt"
+readme = "README.md"
+license = "MPLv2.0"
+categories = ["development-tools"]
+build = "build.rs"
+
+[build-dependencies]
+peg = { version = "0.5.7" }
+
+[dependencies]
+clap = "2.32.0"

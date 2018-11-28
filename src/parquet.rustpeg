@@ -1,0 +1,58 @@
+// This Source Code Form is subject to the terms of the Mozilla Public
+// License, v. 2.0. If a copy of the MPL was not distributed with this
+// file, You can obtain one at http://mozilla.org/MPL/2.0/. */
+
+#![arguments(depth: &mut i32)]
+
+ws = #quiet<[ \t\n\r]>
+
+number = [0-9]+
+
+repetition -> &'input str
+	= $("required" / "optional" / "repeated")
+
+flba_len = "(" number ")"
+
+dt_flba -> &'input str	
+	= $("fixed_len_byte_array" flba_len)
+
+data_types -> &'input str	
+	= $("boolean" / "int32" / "int64" / "int96" / "float" / "double" / "binary")
+
+data_type -> &'input str	
+	= data_types / dt_flba
+
+precision = number
+
+scale = number
+
+logical_group_types = "MAP" / "LIST" / "TUPLE"
+
+logical_primitive_types = "NONE" / "UTF8" / "ENUM" / "DATE" / "TIME_MILLIS"
+			/ "TIME_MICROS" / "TIMESTAMP_MILLIS" / "TIMESTAMP_MICROS"
+			/ "UINT_8" / "UINT_16" / "UINT_32" / "UINT_64" / "INT_8"
+			/ "INT_16" / "INT_32" / "INT_64" / "JSON" / "BSON" / "INTERVAL"
+
+lt_decimal = "DECIMAL" "(" precision "," scale ")"
+
+logical_gtype -> String
+	= ws+ n:$("(" logical_group_types ")") { format!(" {}", n) }
+
+logical_ptype -> String
+	= ws+ n:$("(" (logical_primitive_types / lt_decimal) ")") { format!(" {}", n) }
+
+id -> String		
+	= ws* "=" ws* n:$(number) ws* { format!("={}", n) }
+
+gname -> &'input str		
+	= $((!(ws / "{") .)+)
+
+pname -> &'input str		
+	= $((!(ws / [;=]) .)+)
+
+column	= ws* r:repetition ws+ d:data_type ws+ p:pname l:logical_ptype? i:id? ";" ws* { print!("{}{} {} {}{}{};\n"," ".repeat(2 * *depth as usize), r, d, p, l.unwrap_or("".to_string()), i.unwrap_or("".to_string())) }
+gheader	= ws* r:repetition ws+ "group" ws+ g:gname l:logical_gtype? ws* "{" { print!("{}{} group {}{} {}\n", " ".repeat(2 * *depth as usize), r, g, l.unwrap_or("".to_string()), "\u{7b}"); *depth += 1; }
+group	= gheader fields "}" ws* {*depth -= 1; print!("{}{}", " ".repeat(2 * *depth as usize), "\u{7d}\n"); }
+fields	= (group / column)+
+message	= ws* m:$("message") ws+ g:gname ws* "{" { print!("{} {} {}\n", m, g, "\u{7b}") }
+pub grammar = message fields "}" ws* { print!("{}", "\u{7d}\n") }
